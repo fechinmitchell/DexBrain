@@ -1,0 +1,119 @@
+/* General Styles */
+
+.App {
+  text-align: center;
+  background-color: #1e1e1e;
+  min-height: 100vh;
+  padding: 2rem;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+}
+
+h1 {
+  margin-bottom: 2rem;
+  color: #00ffcc;
+  text-shadow: 0 0 5px #00ffcc;
+}
+
+.token-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.token-card {
+  background-color: #2e2e2e;
+  border-radius: 10px;
+  padding: 1.5rem;
+  width: 300px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.token-card h2 {
+  margin-bottom: 0.5rem;
+  color: #ff6600;
+}
+
+.token-card p {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+.loading, .error, .unexpected-data {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.loading h2, .error h2, .unexpected-data h2 {
+  color: #ffcc00;
+  text-shadow: 0 0 2px #fff;
+}
+
+.unexpected-data pre {
+  text-align: left;
+  background-color: #3e3e3e;
+  padding: 1rem;
+  border-radius: 5px;
+  overflow-x: auto;
+}
+
+/* Hype Meter Styles */
+
+.hype-meter-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hype-meter-squares {
+  display: flex;
+  gap: 2px;
+}
+
+.hype-square {
+  width: 20px;
+  height: 20px;
+  background: #ff0000; /* red for unfilled squares */
+  border: 1px solid #333;
+}
+
+.hype-square.filled {
+  background: #00ff00; /* green for filled squares */
+}
+
+.hype-meter-label {
+  margin-top: 0.5rem;
+  margin-bottom: 10px; /* Added margin-bottom */
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 2px #fff;
+  text-align: center; /* Center the text */
+  width: 100%;        /* Span full width for proper centering */
+}
+
+/* Styles for unknown sentiment */
+
+.hype-meter-container.unknown {
+  padding: 1rem;
+  background-color: #444;
+  border-radius: 8px;
+}
+
+.sentiment-unknown-label {
+  color: #ffcc00;
+  font-weight: bold;
+  text-shadow: 0 0 2px #fff;
+  text-align: center; /* Center the text */
+  width: 100%;
+}
+
+.sentiment-unknown {
+  text-align: center; /* Center the text */
+  margin-top: 10px;   /* Added margin-top for spacing */
+  color: #ffcc00;
+  font-weight: bold;
+  text-shadow: 0 0 2px #fff;
+}

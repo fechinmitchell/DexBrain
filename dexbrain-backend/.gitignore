@@ -1,0 +1,16 @@
+# .gitignore
+
+# Ignore environment variables file
+.env
+
+# Ignore Python bytecode
+__pycache__/
+*.pyc
+
+# Ignore node_modules (if applicable)
+node_modules/
+
+# Ignore macOS system files
+.DS_Store
+
+# Add other files/folders you want to ignore
