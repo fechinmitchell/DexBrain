@@ -1,42 +1,38 @@
+// HypeMeter.js
 import React from "react";
-import "./App.css"; // Ensure your CSS handles the new class for unknown sentiment
+import "./App.css";
 
-function HypeMeter({ score, totalSquares = 10 }) {
+// If your sentiment is in range -1..+1, you can scale it to 0..1.
+function HypeMeter({ score, label = "Hype" }) {
   if (score === "unknown") {
     return (
       <div className="hype-meter-container unknown">
-        <p className="sentiment-unknown-label">Sentiment: Unknown</p>
+        <p className="sentiment-unknown-label">{label} Unknown</p>
       </div>
     );
   }
 
-  // Ensure the score is a number
-  const numericScore = typeof score === "number" ? score : 0;
+  // If your sentiment is 0..1 already, no scaling needed
+  // If your sentiment is -1..1, let's scale it
+  const scaled = Math.max(0, Math.min(1, (score + 1) / 2));
 
-  // Clamp the score between 0 and 1
-  const clampedScore = Math.max(0, Math.min(1, numericScore));
+  let description = "Moderate";
+  if (scaled < 0.3) description = "Dead";
+  else if (scaled > 0.7) description = "Huge";
 
-  let label = "Moderate";
-  if (clampedScore < 0.3) label = "Dead";
-  else if (clampedScore > 0.7) label = "Huge";
-
-  const filledSquares = Math.round(clampedScore * totalSquares);
-
+  const totalSquares = 10;
+  const filledCount = Math.round(scaled * totalSquares);
   const squares = [];
   for (let i = 0; i < totalSquares; i++) {
-    const isFilled = i < filledSquares;
     squares.push(
-      <div
-        key={i}
-        className={`hype-square ${isFilled ? "filled" : "empty"}`}
-      ></div>
+      <div key={i} className={`hype-square ${i < filledCount ? "filled" : "empty"}`} />
     );
   }
 
   return (
     <div className="hype-meter-container">
       <div className="hype-meter-squares">{squares}</div>
-      <div className="hype-meter-label">{label}</div>
+      <div className="hype-meter-label">{label}: {description}</div>
     </div>
   );
 }
