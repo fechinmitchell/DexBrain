@@ -34,18 +34,40 @@ import tweepy
 app = Flask(__name__)
 CORS(app)
 
+# Initialize logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("DexBrain")
 
 # Environment variables
-openai.api_key = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+REDDIT_CLIENT_ID = os.environ.get("REDDIT_CLIENT_ID", "")
+REDDIT_CLIENT_SECRET = os.environ.get("REDDIT_CLIENT_SECRET", "")
+REDDIT_USER_AGENT = os.environ.get("REDDIT_USER_AGENT", "DexBrainSentiment/0.1 by Important-Tooth4506")
+TWITTER_BEARER_TOKEN = os.environ.get("TWITTER_BEARER_TOKEN", "")
+
+if not OPENAI_API_KEY:
+    logger.warning("OpenAI API key not found. GPT analysis will not work.")
+
+if not (REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET):
+    logger.warning("Reddit API credentials not found. Reddit sentiment will not work.")
+
+if not TWITTER_BEARER_TOKEN:
+    logger.warning("Twitter Bearer Token not found. Twitter sentiment will not work.")
+
+openai.api_key = OPENAI_API_KEY
+
+# Initialize Reddit client
 reddit = praw.Reddit(
-    client_id=os.environ.get("REDDIT_CLIENT_ID"),
-    client_secret=os.environ.get("REDDIT_CLIENT_SECRET"),
-    user_agent=os.environ.get("REDDIT_USER_AGENT", "DexBrainSentiment/0.1 by Important-Tooth4506")
+    client_id=REDDIT_CLIENT_ID,
+    client_secret=REDDIT_CLIENT_SECRET,
+    user_agent=REDDIT_USER_AGENT
 )
+
+# Initialize Sentiment Analyzer
 sentiment_analyzer = SentimentIntensityAnalyzer()
-twitter_client = tweepy.Client(bearer_token=os.environ.get("TWITTER_BEARER_TOKEN", ""))
+
+# Initialize Twitter client
+twitter_client = tweepy.Client(bearer_token=TWITTER_BEARER_TOKEN)
 
 # CoinGecko base URL
 COINGECKO_API = "https://api.coingecko.com/api/v3"
@@ -62,13 +84,13 @@ LAST_FETCH_TIMESTAMP = {cat: 0 for cat in CATEGORIES}
 def analyze_with_gpt(token_info):
     """Perform GPT analysis (about ~70 words) referencing only USD-based metrics."""
     prompt = f"""
-    Provide a concise (~70 words) analysis of the following crypto token data (in USD, no BTC references):
+Provide a concise (~70 words) analysis of the following crypto token data (in USD, no BTC references):
 
-    {token_info}
+{token_info}
 
-    Consider market cap, sentiment scores, potential project growth.
-    Return only text without any JSON or additional formatting.
-    """
+Consider market cap, sentiment scores, potential project growth.
+Return only text without any JSON or additional formatting.
+"""
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
@@ -319,7 +341,12 @@ def get_all():
 def index():
     return "DexBrain - Multi-category real calls with once-a-day caching."
 
+###############################################################################
+# Run the Flask App
+###############################################################################
+
 if __name__ == "__main__":
     logger.info("Starting DexBrain Flask app with multi-category real calls (single route).")
-    prefetch_all_categories()  # optionally prefetch on startup
-    app.run(host="0.0.0.0", port=5003, debug=False)
+    prefetch_all_categories()  # Optionally prefetch on startup
+    port = int(os.environ.get("PORT", 5003))
+    app.run(host="0.0.0.0", port=port, debug=False)

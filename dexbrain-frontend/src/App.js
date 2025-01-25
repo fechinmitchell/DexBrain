@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./App.css";
 import HypeMeter from "./HypeMeter";
 
-/** A bunch of interesting crypto facts... */
+/** A collection of interesting crypto facts */
 const CRYPTO_FACTS = [
   "Bitcoin's pseudonymous creator, Satoshi Nakamoto, has never been identified.",
   "Ethereum introduced smart contracts in 2015, revolutionizing decentralized applications.",
@@ -75,6 +75,9 @@ function App() {
   // State to manage rotating crypto facts
   const [factIndex, setFactIndex] = useState(0);
 
+  // Determine API base URL based on environment
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:5003";
+
   useEffect(() => {
     // Start a timer for minimum loading duration (3 seconds)
     const MIN_LOADING_TIME = 3000; // 3 seconds in milliseconds
@@ -83,7 +86,7 @@ function App() {
     // Function to fetch all data from backend
     const fetchData = async () => {
       try {
-        const response = await fetch("http://localhost:5003/api/all");
+        const response = await fetch(`${API_BASE_URL}/api/all`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -140,7 +143,7 @@ function App() {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, []); // Empty dependency array ensures this runs once on mount
+  }, [API_BASE_URL]); // Dependency on 'API_BASE_URL' to handle dynamic endpoints
 
   const handleCategoryClick = (cat) => {
     setCategory(cat);
@@ -171,11 +174,12 @@ function App() {
 
   // Render the error screen if there's an error
   if (error) {
+    const factToShow = CRYPTO_FACTS[factIndex];
     return (
-      <div className="futuristic-error-screen">
-        <h2>Error Loading Data</h2>
-        <p>{error}</p>
-        <p>Please check your connection or try again later.</p>
+      <div className="futuristic-loading-screen">
+        <div className="spinner"></div>
+        <h2>Loading DexBrain Data...</h2>
+        <p className="crypto-fact">{factToShow}</p>
       </div>
     );
   }
@@ -191,10 +195,11 @@ function App() {
         for tracking trending tokens, newly launched projects, top gainers, 
         and top losers.
       </p>
-      {/* <p className="intro-text">
-        Harness GPT analysis, Reddit hype, and Twitter sentiment for a quick, 
-        data-driven overview of the ever-evolving crypto landscape.
-      </p> */}
+
+      <p className="intro-text">
+        DexBrain leverages sentiment analysis to measure project popularity on Reddit, ranking them from the most to least hyped. Use Wisely.
+      </p>
+
 
       {/* Category Buttons */}
       <div className="category-buttons">
