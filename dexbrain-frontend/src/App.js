@@ -193,7 +193,7 @@ function App() {
       <p className="intro-text">
         Stay ahead in the crypto market with DexBrain, your go-to tool 
         for tracking trending tokens, newly launched projects, top gainers, 
-        and top losers.
+        and top losers. 
       </p>
 
       <p className="intro-text">
