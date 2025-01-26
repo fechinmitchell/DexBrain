@@ -7,7 +7,7 @@ using real CoinGecko endpoints for multiple categories:
  - Top Losers
 
 All categories are returned together at /api/all, so the frontend shows a single
-loading screen until all data is loaded.
+loading screen until everything is ready. We store data once per day in memory.
 """
 
 from flask import Flask, jsonify
@@ -25,14 +25,14 @@ load_dotenv()
 # Sentiment and social media imports
 import praw
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-import tweepy
+# import tweepy  # <-- We'll comment out actual usage below
 
 ###############################################################################
 # Configuration & Setup
 ###############################################################################
 
 app = Flask(__name__)
-CORS(app)
+CORS(app)  # Allow cross-origin requests for local dev + any frontends
 
 # Initialize logger
 logging.basicConfig(level=logging.INFO)
@@ -47,27 +47,29 @@ TWITTER_BEARER_TOKEN = os.environ.get("TWITTER_BEARER_TOKEN", "")
 
 if not OPENAI_API_KEY:
     logger.warning("OpenAI API key not found. GPT analysis will not work.")
-
 if not (REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET):
-    logger.warning("Reddit API credentials not found. Reddit sentiment will not work.")
+    logger.warning("Reddit API credentials not found. Reddit sentiment might not work.")
+# if not TWITTER_BEARER_TOKEN:
+#     logger.warning("Twitter Bearer Token not found. Twitter sentiment might not work.")
 
-if not TWITTER_BEARER_TOKEN:
-    logger.warning("Twitter Bearer Token not found. Twitter sentiment will not work.")
-
+# Set OpenAI key
 openai.api_key = OPENAI_API_KEY
 
-# Initialize Reddit client
-reddit = praw.Reddit(
-    client_id=REDDIT_CLIENT_ID,
-    client_secret=REDDIT_CLIENT_SECRET,
-    user_agent=REDDIT_USER_AGENT
-)
+# Initialize Reddit client + sentiment analyzer
+reddit = None
+sentiment_analyzer = None
+if REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET:
+    reddit = praw.Reddit(
+        client_id=REDDIT_CLIENT_ID,
+        client_secret=REDDIT_CLIENT_SECRET,
+        user_agent=REDDIT_USER_AGENT
+    )
+    sentiment_analyzer = SentimentIntensityAnalyzer()
 
-# Initialize Sentiment Analyzer
-sentiment_analyzer = SentimentIntensityAnalyzer()
-
-# Initialize Twitter client
-twitter_client = tweepy.Client(bearer_token=TWITTER_BEARER_TOKEN)
+# Initialize Twitter client (we'll comment out usage to skip Twitter sentiment)
+# twitter_client = None
+# if TWITTER_BEARER_TOKEN:
+#     twitter_client = tweepy.Client(bearer_token=TWITTER_BEARER_TOKEN)
 
 # CoinGecko base URL
 COINGECKO_API = "https://api.coingecko.com/api/v3"
@@ -82,7 +84,7 @@ LAST_FETCH_TIMESTAMP = {cat: 0 for cat in CATEGORIES}
 ###############################################################################
 
 def analyze_with_gpt(token_info):
-    """Perform GPT analysis (about ~70 words) referencing only USD-based metrics."""
+    """Perform GPT analysis (~70 words) referencing only USD-based metrics."""
     prompt = f"""
 Provide a concise (~70 words) analysis of the following crypto token data (in USD, no BTC references):
 
@@ -92,6 +94,10 @@ Consider market cap, sentiment scores, potential project growth.
 Return only text without any JSON or additional formatting.
 """
     try:
+        if not OPENAI_API_KEY:
+            logger.warning("OpenAI API key is missing. Returning 'Analysis not available.'")
+            return "Analysis not available."
+
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -108,6 +114,10 @@ Return only text without any JSON or additional formatting.
 
 def fetch_reddit_sentiment(query, limit=10):
     """Fetch Reddit posts for 'query' and average their VADER compound sentiment."""
+    if not reddit or not sentiment_analyzer:
+        logger.warning("Reddit or Sentiment Analyzer not initialized. Returning None.")
+        return None
+
     try:
         posts = reddit.subreddit("all").search(query, sort="new", limit=limit)
         scores = []
@@ -118,26 +128,11 @@ def fetch_reddit_sentiment(query, limit=10):
         return sum(scores)/len(scores) if scores else 0.0
     except Exception as e:
         logger.error("Error fetching Reddit sentiment:", exc_info=e)
-        return "unknown"
+        return None
 
-def fetch_twitter_sentiment(query, limit=10):
-    """Fetch tweets for 'query' and average compound sentiment."""
-    try:
-        tw = twitter_client.search_recent_tweets(query=query, max_results=limit, tweet_fields=["text"])
-        scores = []
-        if tw.data:
-            for t in tw.data:
-                score = sentiment_analyzer.polarity_scores(t.text)["compound"]
-                scores.append(score)
-        if scores:
-            return sum(scores)/len(scores)
-        return 0.0
-    except tweepy.errors.TooManyRequests:
-        logger.error("Hit Twitter rate limit.")
-        return "unknown"
-    except Exception as e:
-        logger.error("Error fetching Twitter sentiment:", exc_info=e)
-        return "unknown"
+# def fetch_twitter_sentiment(query, limit=10):
+#     """Commented out to skip Twitter sentiment entirely."""
+#     return None
 
 ###############################################################################
 # Category Fetchers
@@ -234,7 +229,7 @@ def fetch_top_gainers_and_losers():
 ###############################################################################
 
 def enhance_tokens(raw_tokens):
-    """Add price, GPT analysis, and sentiments (Reddit/Twitter) to raw token data."""
+    """Add price, GPT analysis, and Reddit sentiment to raw token data. (Twitter commented out)"""
     if not raw_tokens:
         return []
     ids = [t["id"] for t in raw_tokens if t.get("id")]
@@ -273,22 +268,23 @@ def enhance_tokens(raw_tokens):
         # GPT
         gpt_text = analyze_with_gpt(info)
 
-        # Sentiments
+        # Reddit Sentiment
         red_s = fetch_reddit_sentiment(f"{name} {symbol}")
-        tw_s = fetch_twitter_sentiment(name)
-        if red_s == "unknown" and tw_s == "unknown":
-            combined = "unknown"
-        elif red_s == "unknown":
-            combined = tw_s
-        elif tw_s == "unknown":
-            combined = red_s
-        else:
-            combined = (red_s + tw_s)/2
+        # tw_s = fetch_twitter_sentiment(name)   # --> commented out
+        # if red_s == "unknown" and tw_s == "unknown":
+        #     combined = "unknown"
+        # elif red_s == "unknown":
+        #     combined = tw_s
+        # elif tw_s == "unknown":
+        #     combined = red_s
+        # else:
+        #     combined = (red_s + tw_s) / 2
 
+        # For now we won't do combined sentiment, just store reddit
         info["gpt_analysis"] = gpt_text
-        info["reddit_sentiment"] = red_s
-        info["twitter_sentiment"] = tw_s
-        info["sentiment_score"] = combined
+        info["reddit_sentiment"] = red_s if red_s is not None else "unknown"
+        info["twitter_sentiment"] = "unknown"  # Hardcode to "unknown" since we skip Twitter
+        info["sentiment_score"] = red_s if (red_s not in [None, "unknown"]) else "unknown"
 
         enriched.append(info)
     return enriched
@@ -339,14 +335,14 @@ def get_all():
 
 @app.route("/")
 def index():
-    return "DexBrain - Multi-category real calls with once-a-day caching."
+    return "DexBrain - Multi-category real calls with once-a-day caching. Twitter sentiment is commented out."
 
 ###############################################################################
 # Run the Flask App
 ###############################################################################
 
 if __name__ == "__main__":
-    logger.info("Starting DexBrain Flask app with multi-category real calls (single route).")
+    logger.info("Starting DexBrain Flask app with multi-category real calls (no Twitter).")
     prefetch_all_categories()  # Optionally prefetch on startup
     port = int(os.environ.get("PORT", 5003))
     app.run(host="0.0.0.0", port=port, debug=False)

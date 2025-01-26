@@ -57,7 +57,7 @@ const CRYPTO_FACTS = [
 ];
 
 function App() {
-  // State to store all category data
+  // All categories in state
   const [allData, setAllData] = useState({
     trending: [],
     newly_launched: [],
@@ -65,32 +65,25 @@ function App() {
     top_losers: []
   });
 
-  // State to manage loading and error
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Current selected category
   const [category, setCategory] = useState("trending");
-
-  // State to manage rotating crypto facts
   const [factIndex, setFactIndex] = useState(0);
 
-  // Determine API base URL based on environment
+  // Use either your Render URL or local dev
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:5003";
 
   useEffect(() => {
-    // Start a timer for minimum loading duration (3 seconds)
-    const MIN_LOADING_TIME = 3000; // 3 seconds in milliseconds
+    const MIN_LOADING_TIME = 3000;
     const startTime = Date.now();
 
-    // Function to fetch all data from backend
-    const fetchData = async () => {
+    const fetchAllData = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/all`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        const res = await fetch(`${API_BASE_URL}/api/all`);
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
         }
-        const data = await response.json();
+        const data = await res.json();
         setAllData({
           trending: data.trending || [],
           newly_launched: data.newly_launched || [],
@@ -100,14 +93,9 @@ function App() {
 
         const elapsedTime = Date.now() - startTime;
         const remainingTime = MIN_LOADING_TIME - elapsedTime;
-
         if (remainingTime > 0) {
-          // Wait for the remaining time to ensure minimum loading duration
-          setTimeout(() => {
-            setLoading(false);
-          }, remainingTime);
+          setTimeout(() => setLoading(false), remainingTime);
         } else {
-          // If data loading took longer than minimum time, stop loading immediately
           setLoading(false);
         }
       } catch (err) {
@@ -116,22 +104,21 @@ function App() {
       }
     };
 
-    fetchData();
+    fetchAllData();
 
-    // Function to get a new random index different from the current one
+    // Random crypto facts
     const getNewFactIndex = (currentIndex) => {
-      if (CRYPTO_FACTS.length === 0) return 0;
-      let newIndex = currentIndex;
-      while (newIndex === currentIndex && CRYPTO_FACTS.length > 1) {
-        newIndex = Math.floor(Math.random() * CRYPTO_FACTS.length);
+      if (CRYPTO_FACTS.length <= 1) return 0;
+      let newIdx = currentIndex;
+      while (newIdx === currentIndex) {
+        newIdx = Math.floor(Math.random() * CRYPTO_FACTS.length);
       }
-      return newIndex;
+      return newIdx;
     };
 
-    // Set initial random fact index
     setFactIndex(Math.floor(Math.random() * CRYPTO_FACTS.length));
 
-    // Set up interval for rotating crypto facts every 5 seconds
+    // Rotate facts every 5 seconds while loading
     let intervalId;
     if (loading) {
       intervalId = setInterval(() => {
@@ -139,69 +126,53 @@ function App() {
       }, 5000);
     }
 
-    // Cleanup function to clear the interval when component unmounts or loading changes
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [API_BASE_URL]); // Dependency on 'API_BASE_URL' to handle dynamic endpoints
+  }, [API_BASE_URL, loading]);
 
-  const handleCategoryClick = (cat) => {
-    setCategory(cat);
-  };
+  const handleCategoryClick = (cat) => setCategory(cat);
 
-  // Determine which tokens to display based on selected category
+  // tokens from chosen category
   const tokens = allData[category] || [];
 
-  // Sorting function: Descending order based on sentiment_score, "unknown" at the bottom
+  // sort by sentiment_score (unknown goes last)
   const sortedTokens = tokens.slice().sort((a, b) => {
-    if (a.sentiment_score === "unknown" && b.sentiment_score === "unknown") return 0;
-    if (a.sentiment_score === "unknown") return 1; // a after b
-    if (b.sentiment_score === "unknown") return -1; // a before b
-    return b.sentiment_score - a.sentiment_score; // Descending order
+    const aScore = a.sentiment_score;
+    const bScore = b.sentiment_score;
+    if (aScore === "unknown" && bScore === "unknown") return 0;
+    if (aScore === "unknown") return 1;
+    if (bScore === "unknown") return -1;
+    return bScore - aScore; // descending
   });
 
-  // Render the loading screen
   if (loading) {
-    const factToShow = CRYPTO_FACTS[factIndex];
+    const fact = CRYPTO_FACTS[factIndex];
     return (
       <div className="futuristic-loading-screen">
         <div className="spinner"></div>
         <h2>Loading DexBrain Data...</h2>
-        <p className="crypto-fact">{factToShow}</p>
+        <p className="crypto-fact">{fact}</p>
       </div>
     );
   }
 
-  // Render the error screen if there's an error
   if (error) {
-    const factToShow = CRYPTO_FACTS[factIndex];
+    const fact = CRYPTO_FACTS[factIndex];
     return (
       <div className="futuristic-loading-screen">
         <div className="spinner"></div>
         <h2>Loading DexBrain Data...</h2>
-        <p className="crypto-fact">{factToShow}</p>
+        <p className="crypto-fact">{fact}</p>
       </div>
     );
   }
 
-  // Render the main application once data is loaded
   return (
     <div className="App">
-      <h1>DexBrain - Token Scanner</h1>
+      <h1>DexBrain - Token Scanner (No Twitter Analysis)</h1>
+      <p className="intro-text">Scan trending, newly launched, top gainers, and top losers.</p>
 
-      {/* Introduction Paragraphs */}
-      <p className="intro-text">
-        Stay ahead in the crypto market with DexBrain, your go-to tool 
-        for tracking trending tokens, newly launched projects, top gainers, 
-        and top losers. 
-      </p>
-
-      <p className="intro-text">
-        DexBrain leverages sentiment analysis to measure project popularity on Reddit, ranking them from the most to least hyped. Use Wisely.
-      </p>
-
-
-      {/* Category Buttons */}
       <div className="category-buttons">
         <button 
           className={`glow-button ${category === "trending" ? "active" : ""}`}
@@ -229,32 +200,21 @@ function App() {
         </button>
       </div>
 
-      {/* Tokens Display */}
       <div className="token-container">
-        {sortedTokens.map((token, index) => (
-          <div key={index} className="token-card">
-            <h2>{token.name} ({token.symbol.toUpperCase()})</h2>
+        {sortedTokens.map((token, idx) => (
+          <div key={idx} className="token-card">
+            <h2>{token.name} ({token.symbol?.toUpperCase()})</h2>
             <p>Market Cap Rank: {token.market_cap_rank}</p>
-            <p>Market Cap: ${Number(token.market_cap).toLocaleString()}</p>
-            <p>Price (USD): ${Number(token.price_usd).toLocaleString()}</p>
+            <p>Market Cap: {token.market_cap !== "N/A" ? `$${Number(token.market_cap).toLocaleString()}` : "N/A"}</p>
+            <p>Price (USD): {token.price_usd !== "N/A" ? `$${Number(token.price_usd).toLocaleString()}` : "N/A"}</p>
             <p><strong>AI Analysis:</strong> {token.gpt_analysis}</p>
 
-            {/* Sentiment */}
             <div className="sentiment-container">
               <h4 className="sentiment-label">Reddit Hype Meter</h4>
-              <HypeMeter score={token.reddit_sentiment} label="Reddit" />
-
-              {/* {token.sentiment_score === "unknown" ? (
-                <p className="sentiment-unknown">Combined Sentiment: Unknown</p>
-              ) : (
-                <>
-                  <h4 className="sentiment-label">Combined Hype Meter</h4>
-                  <HypeMeter score={token.sentiment_score} label="Combined" />
-                </>
+              <HypeMeter score={token.reddit_sentiment} />
+              {token.sentiment_score === "unknown" && (
+                <p className="sentiment-unknown">No Combined Sentiment (Twitter Disabled)</p>
               )}
-              {token.twitter_sentiment === "unknown" && (
-                <p className="sentiment-unknown">Twitter Sentiment: Unknown</p>
-              )} */}
             </div>
           </div>
         ))}
