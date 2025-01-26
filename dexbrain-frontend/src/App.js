@@ -170,9 +170,17 @@ function App() {
 
   return (
     <div className="App">
-      <h1>DexBrain - Token Scanner (No Twitter Analysis)</h1>
-      <p className="intro-text">Scan trending, newly launched, top gainers, and top losers.</p>
+      <h1>DexBrain - Token Scanner</h1>
+      {/* Introduction Paragraphs */}
+      <p className="intro-text">
+        Stay ahead in the crypto market with DexBrain, your go-to tool 
+        for tracking trending tokens, newly launched projects, top gainers, 
+        and top losers. 
+      </p>
 
+      <p className="intro-text">
+        DexBrain leverages sentiment analysis to measure project popularity on Reddit, ranking them from the most to least hyped. Use Wisely.
+      </p>
       <div className="category-buttons">
         <button 
           className={`glow-button ${category === "trending" ? "active" : ""}`}
